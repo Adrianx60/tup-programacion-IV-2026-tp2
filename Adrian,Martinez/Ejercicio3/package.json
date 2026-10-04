@@ -1,7 +1,7 @@
 {
-  "name": "ejercicio1",
+  "name": "ejercicio3",
   "version": "1.0.0",
-  "description": "Api rectangulos",
+  "description": "API de calificaciones de alumnos",
   "license": "ISC",
   "author": "Martinez,Adrian",
   "type": "module",

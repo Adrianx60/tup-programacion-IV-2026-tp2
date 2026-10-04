@@ -1,0 +1,55 @@
+### Obtener todas las materias
+GET http://localhost:3000/materias
+
+### Crear una nueva materia
+POST http://localhost:3000/materias
+Content-Type: application/json
+
+{
+  "nombre": "Programación IV"
+}
+
+### Obtener todas las calificaciones
+GET http://localhost:3000/calificaciones
+
+### Filtrar calificaciones por ID de materia
+GET http://localhost:3000/calificaciones?materia_id=1
+
+### Registrar calificaciones válidas para un alumno (Escala 1 a 10)
+POST http://localhost:3000/calificaciones
+Content-Type: application/json
+
+{
+  "alumno_nombre": "Juan Pérez",
+  "materia_id": 1,
+  "nota1": 8.5,
+  "nota2": 9.0,
+  "nota3": 7.5
+}
+
+### Intentar registrar un duplicado (Mismo alumno y materia - Debe fallar)
+POST http://localhost:3000/calificaciones
+Content-Type: application/json
+
+{
+  "alumno_nombre": "  juan pérez  ",
+  "materia_id": 1,
+  "nota1": 6.0,
+  "nota2": 6.0,
+  "nota3": 6.0
+}
+
+### Actualizar calificaciones (PUT)
+PUT http://localhost:3000/calificaciones/1
+Content-Type: application/json
+
+{
+  "alumno_nombre": "Juan Pérez",
+  "materia_id": 1,
+  "nota1": 10.0,
+  "nota2": 9.5,
+  "nota3": 9.0
+}
+
+### Eliminar un registro de calificaciones
+DELETE http://localhost:3000/calificaciones/1
