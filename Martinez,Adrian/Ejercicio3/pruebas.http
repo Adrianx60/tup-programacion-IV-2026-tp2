@@ -1,0 +1,46 @@
+@api = http://localhost:3000/api
+
+### Obtener todas las materias
+GET {{api}}/materias
+
+### Obtener todas las calificaciones
+GET {{api}}/calificaciones
+
+### Crear una calificación válida
+POST {{api}}/calificaciones
+Content-Type: application/json
+
+{
+    "nombre_alumno": "Juan Pérez",
+    "materia_id": 1,
+    "nota1": 8.5,
+    "nota2": 9.0,
+    "nota3": 7.5
+}
+
+### Intentar crear una calificación duplicada (Debe dar error 409 por la regla de unicidad)
+POST {{api}}/calificaciones
+Content-Type: application/json
+
+{
+    "nombre_alumno": "Juan Pérez",
+    "materia_id": 1,
+    "nota1": 6.0,
+    "nota2": 7.0,
+    "nota3": 8.0
+}
+
+### Actualizar una calificación existente (Ej: ID 1)
+PUT {{api}}/calificaciones/1
+Content-Type: application/json
+
+{
+    "nombre_alumno": "Juan Pérez",
+    "materia_id": 2,
+    "nota1": 9.0,
+    "nota2": 9.5,
+    "nota3": 10.0
+}
+
+### Eliminar una calificación por ID (Ej: ID 1)
+DELETE {{api}}/calificaciones/1

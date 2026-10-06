@@ -1,82 +1,24 @@
-@base = http://localhost:3000
+CREATE DATABASE IF NOT EXISTS db_calificaciones;
+USE db_calificaciones;
 
-### ---------- ALUMNOS ----------
-GET {{base}}/alumnos?q=an&page=1&limit=10
+-- Tabla independiente para las materias
+CREATE TABLE IF NOT EXISTS materias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE
+);
 
-###
-POST {{base}}/alumnos
-Content-Type: application/json
+-- Tabla de calificaciones vinculando alumno y materia
+CREATE TABLE IF NOT EXISTS calificaciones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_alumno VARCHAR(100) NOT NULL,
+    materia_id INT NOT NULL,
+    nota1 DECIMAL(4,2) NOT NULL,
+    nota2 DECIMAL(4,2) NOT NULL,
+    nota3 DECIMAL(4,2) NOT NULL,
+    CONSTRAINT fk_materia FOREIGN KEY (materia_id) REFERENCES materias(id) ON DELETE CASCADE,
+    CONSTRAINT uc_alumno_materia UNIQUE (nombre_alumno, materia_id)
+);
 
-{ "nombre": "María Fernández" }
-
-### Inválido (nombre vacío) -> 400
-POST {{base}}/alumnos
-Content-Type: application/json
-
-{ "nombre": "" }
-
-###
-PUT {{base}}/alumnos/1
-Content-Type: application/json
-
-{ "nombre": "Ana Pérez López" }
-
-###
-GET {{base}}/alumnos/1/calificaciones
-
-### ---------- MATERIAS ----------
-GET {{base}}/materias
-
-###
-POST {{base}}/materias
-Content-Type: application/json
-
-{ "nombre": "Sistemas Operativos" }
-
-### Repetida -> 409
-POST {{base}}/materias
-Content-Type: application/json
-
-{ "nombre": "Base de Datos" }
-
-### ---------- CALIFICACIONES ----------
-GET {{base}}/calificaciones?alumno_id=1
-
-###
-POST {{base}}/calificaciones
-Content-Type: application/json
-
-{ "alumno_id": 1, "materia_id": 1, "notas": [8, 7.5, 9] }
-
-### Duplicado alumno+materia -> 409
-POST {{base}}/calificaciones
-Content-Type: application/json
-
-{ "alumno_id": 1, "materia_id": 1, "notas": [6, 6, 6] }
-
-### Solo 2 notas -> 400
-POST {{base}}/calificaciones
-Content-Type: application/json
-
-{ "alumno_id": 1, "materia_id": 2, "notas": [8, 7] }
-
-### Nota fuera de escala (0-10) -> 400
-POST {{base}}/calificaciones
-Content-Type: application/json
-
-{ "alumno_id": 1, "materia_id": 2, "notas": [8, 11, 7] }
-
-### Materia inexistente -> 404
-POST {{base}}/calificaciones
-Content-Type: application/json
-
-{ "alumno_id": 1, "materia_id": 999, "notas": [8, 7, 7] }
-
-###
-PUT {{base}}/calificaciones/1
-Content-Type: application/json
-
-{ "alumno_id": 1, "materia_id": 1, "notas": [9, 9, 10] }
-
-###
-DELETE {{base}}/calificaciones/1
+-- Datos iniciales de prueba para materias
+INSERT INTO materias (nombre) VALUES ('Matemática I'), ('Programación I'), ('Base de Datos') 
+ON DUPLICATE KEY UPDATE nombre=nombre;

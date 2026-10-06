@@ -1,18 +1,18 @@
 {
   "name": "ejercicio3",
   "version": "1.0.0",
-  "description": "API REST de calificaciones de alumnos (Express + MySQL + express-validator)",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
-  },
+  "description": "API de Gestión",
   "license": "ISC",
+  "author": "Martinez_Adrian",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "express-validator": "^7.2.0",
-    "mysql2": "^3.11.0"
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "mysql2": "^3.24.5"
   }
 }
