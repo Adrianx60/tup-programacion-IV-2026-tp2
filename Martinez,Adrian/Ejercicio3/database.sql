@@ -1,26 +1,82 @@
-CREATE DATABASE IF NOT EXISTS calificaciones_db;
-USE calificaciones_db;
+@base = http://localhost:3000
 
--- Tabla independiente para las materias
-CREATE TABLE IF NOT EXISTS materias (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE
-);
+### ---------- ALUMNOS ----------
+GET {{base}}/alumnos?q=an&page=1&limit=10
 
--- Tabla de calificaciones con relación a materias y restricción de unicidad
-CREATE TABLE IF NOT EXISTS calificaciones (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    alumno_nombre VARCHAR(150) NOT NULL,
-    materia_id INT NOT NULL,
-    nota1 DECIMAL(4,2) NOT NULL,
-    nota2 DECIMAL(4,2) NOT NULL,
-    nota3 DECIMAL(4,2) NOT NULL,
-    FOREIGN KEY (materia_id) REFERENCES materias(id) ON DELETE CASCADE,
-    CONSTRAINT uc_alumno_materia UNIQUE (alumno_nombre, materia_id)
-);
+###
+POST {{base}}/alumnos
+Content-Type: application/json
 
--- Datos de prueba iniciales
-INSERT INTO materias (nombre) VALUES 
-('Gestión de Desarrollo de Software'), 
-('Programación I'), 
-('Base de Datos');
+{ "nombre": "María Fernández" }
+
+### Inválido (nombre vacío) -> 400
+POST {{base}}/alumnos
+Content-Type: application/json
+
+{ "nombre": "" }
+
+###
+PUT {{base}}/alumnos/1
+Content-Type: application/json
+
+{ "nombre": "Ana Pérez López" }
+
+###
+GET {{base}}/alumnos/1/calificaciones
+
+### ---------- MATERIAS ----------
+GET {{base}}/materias
+
+###
+POST {{base}}/materias
+Content-Type: application/json
+
+{ "nombre": "Sistemas Operativos" }
+
+### Repetida -> 409
+POST {{base}}/materias
+Content-Type: application/json
+
+{ "nombre": "Base de Datos" }
+
+### ---------- CALIFICACIONES ----------
+GET {{base}}/calificaciones?alumno_id=1
+
+###
+POST {{base}}/calificaciones
+Content-Type: application/json
+
+{ "alumno_id": 1, "materia_id": 1, "notas": [8, 7.5, 9] }
+
+### Duplicado alumno+materia -> 409
+POST {{base}}/calificaciones
+Content-Type: application/json
+
+{ "alumno_id": 1, "materia_id": 1, "notas": [6, 6, 6] }
+
+### Solo 2 notas -> 400
+POST {{base}}/calificaciones
+Content-Type: application/json
+
+{ "alumno_id": 1, "materia_id": 2, "notas": [8, 7] }
+
+### Nota fuera de escala (0-10) -> 400
+POST {{base}}/calificaciones
+Content-Type: application/json
+
+{ "alumno_id": 1, "materia_id": 2, "notas": [8, 11, 7] }
+
+### Materia inexistente -> 404
+POST {{base}}/calificaciones
+Content-Type: application/json
+
+{ "alumno_id": 1, "materia_id": 999, "notas": [8, 7, 7] }
+
+###
+PUT {{base}}/calificaciones/1
+Content-Type: application/json
+
+{ "alumno_id": 1, "materia_id": 1, "notas": [9, 9, 10] }
+
+###
+DELETE {{base}}/calificaciones/1

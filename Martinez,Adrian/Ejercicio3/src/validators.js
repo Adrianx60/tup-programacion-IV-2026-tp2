@@ -1,68 +1,109 @@
-import { body, param, validationResult } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
+import pool from './db.js';
 
-const validarResultados = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errores: errors.array() });
+// Escala de notas documentada: 0 a 10, hasta 2 decimales
+export const NOTA_MIN = 0;
+export const NOTA_MAX = 10;
+
+// ---------- Middleware que corta si hay errores de formato (400) ----------
+export const validar = (req, res, next) => {
+  const errores = validationResult(req);
+  if (!errores.isEmpty()) {
+    return res.status(400).json({
+      error: 'Datos inválidos',
+      detalles: errores.array().map((e) => ({
+        campo: e.path,
+        ubicacion: e.location,
+        mensaje: e.msg,
+      })),
+    });
   }
   next();
 };
 
-const escalaNota = { min: 1, max: 10 };
+// ---------- Reglas reutilizables ----------
+export const idParam = param('id').isInt({ min: 1 }).withMessage('El id debe ser un entero positivo').toInt();
 
-export const validarCrearCalificacion = [
-  body('alumno')
-    .exists().withMessage('El nombre del alumno es obligatorio')
-    .isString().withMessage('El alumno debe ser una cadena de texto')
+const nombreRule = (campo, etiqueta) =>
+  body(campo)
+    .exists({ values: 'falsy' }).withMessage(`${etiqueta} es obligatorio`).bail()
+    .isString().withMessage(`${etiqueta} debe ser texto`).bail()
     .trim()
-    .notEmpty().withMessage('El nombre del alumno no puede estar vacío'),
-  body('materia_id')
-    .exists().withMessage('El ID de la materia es obligatorio')
-    .isInt({ gt: 0 }).withMessage('El ID de la materia debe ser un entero válido'),
-  body('nota1')
-    .exists().withMessage('La nota 1 es obligatoria')
-    .isFloat(escalaNota).withMessage('La nota 1 debe ser un número entre 1 y 10'),
-  body('nota2')
-    .exists().withMessage('La nota 2 es obligatoria')
-    .isFloat(escalaNota).withMessage('La nota 2 debe ser un número entre 1 y 10'),
-  body('nota3')
-    .exists().withMessage('La nota 3 es obligatoria')
-    .isFloat(escalaNota).withMessage('La nota 3 debe ser un número entre 1 y 10'),
-  validarResultados
+    .isLength({ min: 2, max: 100 }).withMessage(`${etiqueta} debe tener entre 2 y 100 caracteres`)
+    .matches(/^[\p{L}\p{N}][\p{L}\p{N}\s.'-]*$/u)
+    .withMessage(`${etiqueta} contiene caracteres no válidos`);
+
+const paginacion = [
+  query('page').optional().isInt({ min: 1 }).withMessage('page debe ser entero >= 1').toInt(),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit debe estar entre 1 y 100').toInt(),
 ];
 
-export const validarActualizarCalificacion = [
-  param('id').isInt({ gt: 0 }).withMessage('El ID debe ser un entero mayor a cero'),
-  body('alumno')
-    .optional()
-    .isString().withMessage('El alumno debe ser una cadena de texto')
-    .trim()
-    .notEmpty().withMessage('El nombre del alumno no puede estar vacío'),
-  body('materia_id')
-    .optional()
-    .isInt({ gt: 0 }).withMessage('El ID de la materia debe ser un entero válido'),
-  body('nota1')
-    .optional()
-    .isFloat(escalaNota).withMessage('La nota 1 debe ser un número entre 1 y 10'),
-  body('nota2')
-    .optional()
-    .isFloat(escalaNota).withMessage('La nota 2 debe ser un número entre 1 y 10'),
-  body('nota3')
-    .optional()
-    .isFloat(escalaNota).withMessage('La nota 3 debe ser un número entre 1 y 10'),
-  validarResultados
+// ---------- Alumnos ----------
+export const alumnoBody = [nombreRule('nombre', 'El nombre del alumno')];
+export const alumnosQuery = [
+  query('q').optional().isString().trim().isLength({ max: 100 }).withMessage('q admite hasta 100 caracteres'),
+  ...paginacion,
 ];
 
-export const validarId = [
-  param('id').isInt({ gt: 0 }).withMessage('El ID debe ser un entero mayor a cero'),
-  validarResultados
+// ---------- Materias ----------
+export const materiaBody = [nombreRule('nombre', 'El nombre de la materia')];
+export const materiasQuery = [
+  query('q').optional().isString().trim().isLength({ max: 100 }).withMessage('q admite hasta 100 caracteres'),
+  ...paginacion,
 ];
 
-export const validarCrearMateria = [
-  body('nombre')
-    .exists().withMessage('El nombre de la materia es obligatorio')
-    .isString().withMessage('El nombre debe ser una cadena de texto')
-    .trim()
-    .notEmpty().withMessage('El nombre de la materia no puede estar vacío'),
-  validarResultados
+// ---------- Calificaciones ----------
+export const calificacionBody = [
+  body('alumno_id').isInt({ min: 1 }).withMessage('alumno_id debe ser un entero positivo').toInt(),
+  body('materia_id').isInt({ min: 1 }).withMessage('materia_id debe ser un entero positivo').toInt(),
+  body('notas')
+    .isArray({ min: 3, max: 3 })
+    .withMessage('Se deben informar exactamente 3 notas'),
+  body('notas.*')
+    .custom((n) => typeof n === 'number' && Number.isFinite(n))
+    .withMessage('Cada nota debe ser un número')
+    .bail()
+    .custom((n) => n >= NOTA_MIN && n <= NOTA_MAX)
+    .withMessage(`Cada nota debe estar entre ${NOTA_MIN} y ${NOTA_MAX}`)
+    .bail()
+    .custom((n) => Math.round(n * 100) / 100 === n)
+    .withMessage('Cada nota admite hasta 2 decimales'),
 ];
+
+export const calificacionesQuery = [
+  query('alumno_id').optional().isInt({ min: 1 }).withMessage('alumno_id inválido').toInt(),
+  query('materia_id').optional().isInt({ min: 1 }).withMessage('materia_id inválido').toInt(),
+  ...paginacion,
+];
+
+// ---------- Reglas de negocio contra la BD (404 / 409) ----------
+export const existeAlumno = async (req, res, next) => {
+  try {
+    const [r] = await pool.execute('SELECT id FROM alumnos WHERE id = ?', [req.body.alumno_id]);
+    if (r.length === 0) return res.status(404).json({ error: `No existe el alumno con id ${req.body.alumno_id}` });
+    next();
+  } catch (e) { next(e); }
+};
+
+export const existeMateria = async (req, res, next) => {
+  try {
+    const [r] = await pool.execute('SELECT id FROM materias WHERE id = ?', [req.body.materia_id]);
+    if (r.length === 0) return res.status(404).json({ error: `No existe la materia con id ${req.body.materia_id}` });
+    next();
+  } catch (e) { next(e); }
+};
+
+// Unicidad (alumno, materia). En PUT se excluye el propio registro.
+export const sinDuplicado = async (req, res, next) => {
+  try {
+    const excluir = req.params.id || 0;
+    const [r] = await pool.execute(
+      'SELECT id FROM calificaciones WHERE alumno_id = ? AND materia_id = ? AND id <> ?',
+      [req.body.alumno_id, req.body.materia_id, excluir]
+    );
+    if (r.length > 0) {
+      return res.status(409).json({ error: 'Ya existe una calificación para ese alumno en esa materia', id_existente: r[0].id });
+    }
+    next();
+  } catch (e) { next(e); }
+};
