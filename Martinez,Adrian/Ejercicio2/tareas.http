@@ -1,0 +1,37 @@
+### Obtener todas las tareas
+GET http://localhost:3000/tareas
+
+### Filtrar tareas completadas
+GET http://localhost:3000/tareas?estado=true
+
+### Filtrar tareas pendientes
+GET http://localhost:3000/tareas?estado=false
+
+### Crear una tarea nueva
+POST http://localhost:3000/tareas
+Content-Type: application/json
+
+{
+  "nombre": "Estudiar Node.js",
+  "completada": false
+}
+
+### Intentar crear tarea duplicada (Debe fallar)
+POST http://localhost:3000/tareas
+Content-Type: application/json
+
+{
+  "nombre": "Estudiar Node.js",
+  "completada": false
+}
+
+### Actualizar estado de una tarea (Ej: ID 1)
+PUT http://localhost:3000/tareas/1
+Content-Type: application/json
+
+{
+  "completada": true
+}
+
+### Eliminar una tarea (Ej: ID 1)
+DELETE http://localhost:3000/tareas/1
